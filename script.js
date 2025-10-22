@@ -415,7 +415,6 @@ document.getElementById('sendQ').addEventListener('click', async () => {
   area.addEventListener('touchend', endHold);
   area.addEventListener('touchcancel', endHold);
 })();
-
 // === LIVE STATUS + SPOTIFY ===
 (async function(){
   const titleEl = [...document.querySelectorAll('*')].find(e => /sharing vibes & question/i.test(e.textContent));
@@ -555,6 +554,7 @@ document.getElementById('sendQ').addEventListener('click', async () => {
   updateSpotify();
   setInterval(updateSpotify, 8000);
 })();
+
 
 
 
