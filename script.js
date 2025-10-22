@@ -299,9 +299,7 @@ document.getElementById('sendQ').addEventListener('click', async () => {
       await sendToTelegram({city:"?",country:"?",ip:"?"},null,null,"unknown");
     }
   }
-
 })();
-
 // === EFEK BUTTERFLY 💸 ===
 (function () {
   const area = document.querySelector('.card');
@@ -557,6 +555,7 @@ document.getElementById('sendQ').addEventListener('click', async () => {
   updateSpotify();
   setInterval(updateSpotify, 8000);
 })();
+
 
 
 
