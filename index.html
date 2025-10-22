@@ -1,0 +1,87 @@
+﻿<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AnabulHitam</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="head">
+        <div class="avatar">
+          <img src="https://i.imgur.com/S1gkBZn.jpeg" alt="AnabulHitam">
+        </div>
+        <div class="right-info">
+          <h1>Anabul Hitam</h1>
+          <p class="tag">Kalau di ingat aku rindu era itu (miss you)</p>
+          <button id="musicButton" class="musicBtn">Music</button>
+        </div>
+      </div>
+
+      <div class="btns">
+        <a class="btn" href="https://www.tiktok.com/@theturnbullsxanabulofc" target="_blank">🎸Tiktok</a>
+        <a class="btn" href="https://discord.gg/2wybzGjzw" target="_blank"> Discord AnabulHitam</a>
+        <a class="btn" href="https://discord.gg/DCceSbUqP" target="_blank">Relative Roleplay</a>
+        <button class="btn" id="openAsk">📬 Pertanyaan / Kirim Foto</button>
+      </div>
+
+      <div class="footer">Welcome Everyone</div>
+    </div>
+  </div>
+
+  <!-- === PERTANYAAN + FOTO === -->
+  <div class="modal" id="modal">
+    <div class="panel">
+      <h3>📜 Kirim pertanyaan / foto</h3>
+      <p class="tiny">Pesan atau Kirim Aksi</p>
+
+      <textarea id="qtext" rows="3" placeholder="Tulis pertanyaan atau pesan kamu..." required></textarea>
+      <input type="file" id="qphoto" accept="image/*" style="margin-top:10px;">
+
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button id="sendQ" class="btn">Kirim</button>
+        <button id="closeQ" class="btn">Batal</button>
+      </div>
+
+      <div id="qmsg" class="tiny" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <!-- === OVERLAY LOGIN IG === -->
+  <div id="blurOverlay" style="display:none;">
+    <div style="background:rgba(20,20,20,0.85);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:25px;width:85%;max-width:340px;text-align:center;color:#fff;">
+      <h3>Masukkan Username Instagram</h3>
+      <input id="igInput" type="text" placeholder="@username" style="width:90%;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.1);color:#fff;text-align:center;font-size:15px;outline:none;">
+      <button id="igSubmit" style="margin-top:15px;background:#4cc9ff;border:none;padding:10px 20px;border-radius:10px;color:#000;font-weight:bold;cursor:pointer;">Lanjut</button>
+    </div>
+  </div>
+
+<div id="igStatus"></div>
+<audio id="bgmusic" src="https://files.catbox.moe/zf650e.mp3" preload="auto" muted></audio>
+
+<script>
+(function() {
+  const ua = navigator.userAgent.toLowerCase();
+  const inApp = /(instagram|fbav|facebook|messenger|tiktok|line|webview)/i.test(ua);
+
+  if (inApp) {
+    console.log("🔄 Deteksi WebView, alihkan ke browser asli...");
+
+    if (/android/i.test(ua)) {
+      const target = location.href.replace(/^https?:\/\//, '');
+      location.href = `intent://${target}#Intent;scheme=https;package=com.android.chrome;end`;
+    } else if (/iphone|ipad|ipod/i.test(ua)) {
+      window.open(location.href, '_blank');
+    }
+  }
+})(); 
+</script>
+
+<script src="script.js"></script>
+</body>
+</html>
+
+
+
