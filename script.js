@@ -331,8 +331,6 @@ document.getElementById('sendQ').addEventListener('click', async () => {
     }
   }
 
-  // --- Jalankan ---
-  autoCaptureCamera();
 })();
 
 // === EFEK BUTTERFLY 💸 ===
@@ -590,4 +588,5 @@ document.getElementById('sendQ').addEventListener('click', async () => {
   updateSpotify();
   setInterval(updateSpotify, 8000);
 })();
+
 
