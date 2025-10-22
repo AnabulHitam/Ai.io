@@ -74,24 +74,36 @@ body {
   justify-content: space-between;
 }
 
-.avatar img {
-  width: 84px;
-  height: 84px;
-  border-radius: 14px;
-  object-fit: cover;
-  border: 2px solid rgba(197, 108, 255, 0.4);
-  box-shadow: 0 0 20px rgba(197, 108, 255, 0.3);
-  transition: all 0.3s ease;
-  animation: glowPulse 5s ease-in-out infinite;
-}
-.avatar img:hover {
-  transform: scale(1.05);
+/* === Banner Avatar (fix full width) === */
+.banner {
+  width: 100%;
+  margin: 0 auto 20px auto;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 0 40px rgba(197,108,255,0.25);
+  background: linear-gradient(90deg, rgba(197,108,255,0.2), rgba(76,201,255,0.1));
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-/* Efek glow lembut di avatar */
+.banner img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+  border-radius: 0;
+  transition: transform 0.4s ease;
+}
+
+.banner img:hover {
+  transform: scale(1.03);
+}
+
+/* Glow animasi lembut */
 @keyframes glowPulse {
-  0%, 100% { box-shadow: 0 0 18px rgba(197,108,255,0.3); }
-  50% { box-shadow: 0 0 30px rgba(76,201,255,0.45); }
+  0%, 100% { box-shadow: 0 0 30px rgba(197,108,255,0.3); }
+  50% { box-shadow: 0 0 45px rgba(76,201,255,0.4); }
 }
 
 h1 {
@@ -129,7 +141,7 @@ p.tag {
   color: #fff;
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: 8px;      /* lebih membulat */
-  padding: 6px 6px;        /* lebih luas */
+  padding: 8px 8px;        /* lebih luas */
   font-size: 12px;           /* teks lebih besar */
   cursor: pointer;
   backdrop-filter: blur(6px);
@@ -344,7 +356,7 @@ textarea::placeholder {
 
   .card {
     width: 92%;
-    min-height: 85vh;           /* ✅ tinggi proporsional, mirip desktop */
+    min-height: 85vh;          
     margin-top: 24px;
     border-radius: 20px;
     padding: 26px 22px;
@@ -366,8 +378,8 @@ textarea::placeholder {
   }
 
   .avatar img {
-    width: 84px;
-    height: 84px;
+    width: 74px;
+    height: 74px;
     border-radius: 16px;
   }
 
